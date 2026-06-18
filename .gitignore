@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+env/
+.env/
+.venv/
+
+# Banco de dados (contém credenciais - NÃO subir)
+fulltrack.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Selenium
+chromedriver
+geckodriver
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.production

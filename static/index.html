@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FullTrack Manager</title>
+  <meta name="description" content="Dashboard para gerenciamento e bloqueio de seriais FullTrack" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">FullTrack</span>
+        <span class="brand-sub">Manager</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="configuracoes" id="nav-configuracoes">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>Configurações</span>
+      </a>
+      <a href="#" class="nav-item" data-page="logs" id="nav-logs">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span>Logs</span>
+        <span class="nav-badge" id="log-badge" style="display:none"></span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="process-indicator" id="process-indicator">
+        <div class="indicator-dot idle" id="indicator-dot"></div>
+        <div class="indicator-info">
+          <span class="indicator-label" id="indicator-label">Aguardando</span>
+          <span class="indicator-sub" id="indicator-sub"></span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════ MAIN ═══════════════════ -->
+  <main class="main">
+
+    <!-- Header -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="topbar-right" id="topbar-actions"></div>
+    </header>
+
+    <!-- ─── PAGE: DASHBOARD ─── -->
+    <section class="page active" id="page-dashboard">
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card" id="card-total">
+          <div class="stat-icon total">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+        </div>
+        <div class="stat-card" id="card-pendente">
+          <div class="stat-icon pendente">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-pendente">0</div>
+            <div class="stat-label">Pendentes</div>
+          </div>
+        </div>
+        <div class="stat-card" id="card-bloqueado">
+          <div class="stat-icon bloqueado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-bloqueado">0</div>
+            <div class="stat-label">Bloqueados</div>
+          </div>
+        </div>
+        <div class="stat-card" id="card-erro">
+          <div class="stat-icon erro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-erro">0</div>
+            <div class="stat-label">Erros</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div class="action-bar-left">
+          <button class="btn btn-primary" id="btn-add-serial" onclick="openAddModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar Seriais
+          </button>
+          <button class="btn btn-secondary" onclick="openUploadModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            Importar Planilha
+          </button>
+          <button class="btn btn-success" id="btn-process-all" onclick="processAll()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Processar Pendentes
+          </button>
+        </div>
+        <div class="action-bar-right">
+          <div class="filter-group">
+            <label>Filtrar:</label>
+            <select id="filter-status" onchange="applyFilter()">
+              <option value="">Todos</option>
+              <option value="pendente">Pendentes</option>
+              <option value="bloqueado">Bloqueados</option>
+              <option value="erro">Erros</option>
+              <option value="nao_encontrado">Não encontrado</option>
+              <option value="processando">Processando</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="refreshSerials()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Atualizar
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Bar (hidden by default) -->
+      <div class="progress-container" id="progress-container" style="display:none">
+        <div class="progress-header">
+          <span id="progress-label">Processando...</span>
+          <span id="progress-count">0/0</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+        <div class="progress-current" id="progress-current"></div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        <table class="data-table" id="serials-table">
+          <thead>
+            <tr>
+              <th>Serial</th>
+              <th>Status</th>
+              <th>Mensagem</th>
+              <th>Atualizado</th>
+              <th class="col-actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="serials-tbody">
+            <tr class="empty-row">
+              <td colspan="5">
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                  <p>Nenhum serial cadastrado</p>
+                  <small>Clique em "Adicionar Seriais" ou importe uma planilha</small>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- ─── PAGE: CONFIGURAÇÕES ─── -->
+    <section class="page" id="page-configuracoes">
+      <div class="settings-grid">
+
+        <!-- Credenciais -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-icon cred">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div>
+              <h2>Credenciais FullTrack</h2>
+              <p>Usuário e senha utilizados para acessar a plataforma</p>
+            </div>
+          </div>
+          <form class="settings-form" id="form-credentials" onsubmit="saveCredentials(event)">
+            <div class="form-group">
+              <label for="input-username">E-mail / Usuário</label>
+              <input type="text" id="input-username" placeholder="seu@email.com" autocomplete="username" />
+              <small>Login usado no site FullTrack</small>
+            </div>
+            <div class="form-group">
+              <label for="input-password">Senha</label>
+              <div class="password-wrapper">
+                <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password" />
+                <button type="button" class="btn-show-pass" onclick="togglePassword('input-password', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <small id="pass-hint">Deixe em branco para manter a senha atual</small>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Salvar Credenciais
+              </button>
+              <button type="button" class="btn btn-ghost" onclick="testConnection()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                Testar Conexão
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Configurações de Automação -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-icon auto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </div>
+            <div>
+              <h2>Automação</h2>
+              <p>Parâmetros do Selenium e FullTrack</p>
+            </div>
+          </div>
+          <form class="settings-form" id="form-automation" onsubmit="saveAutomation(event)">
+            <div class="form-group">
+              <label for="input-url">URL do FullTrack</label>
+              <input type="url" id="input-url" placeholder="https://..." />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="input-timeout">Timeout (segundos)</label>
+                <input type="number" id="input-timeout" min="5" max="120" value="20" />
+              </div>
+              <div class="form-group">
+                <label for="input-delay">Delay entre seriais (s)</label>
+                <input type="number" id="input-delay" min="0" max="30" value="1" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="toggle-label">
+                <div class="toggle-wrapper">
+                  <input type="checkbox" id="input-headless" checked />
+                  <span class="toggle-track"></span>
+                </div>
+                <div>
+                  <span>Modo Headless</span>
+                  <small>Chrome sem janela visual (recomendado para servidor Linux)</small>
+                </div>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Salvar Configurações
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Informação sobre seletores -->
+        <div class="settings-card info-card">
+          <div class="settings-card-header">
+            <div class="settings-icon info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <div>
+              <h2>Sobre os Seletores CSS</h2>
+              <p>Configuração técnica do Selenium</p>
+            </div>
+          </div>
+          <div class="info-content">
+            <p>O arquivo <code>automation.py</code> contém os seletores CSS/XPATH usados para interagir com o FullTrack. Seletores marcados com <strong>⚠️ AJUSTAR</strong> precisam ser validados com o site real.</p>
+            <div class="steps-list">
+              <div class="step-item">
+                <span class="step-num">1</span>
+                <span>Abra o FullTrack no Chrome e pressione <kbd>F12</kbd></span>
+              </div>
+              <div class="step-item">
+                <span class="step-num">2</span>
+                <span>Clique no ícone de seta (inspecionar elemento)</span>
+              </div>
+              <div class="step-item">
+                <span class="step-num">3</span>
+                <span>Clique no campo de busca para ver seu seletor CSS</span>
+              </div>
+              <div class="step-item">
+                <span class="step-num">4</span>
+                <span>Atualize o seletor no arquivo <code>automation.py</code></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── PAGE: LOGS ─── -->
+    <section class="page" id="page-logs">
+      <div class="logs-toolbar">
+        <div class="logs-toolbar-left">
+          <div class="log-filter-group">
+            <button class="log-filter-btn active" data-level="" onclick="setLogFilter('', this)">Todos</button>
+            <button class="log-filter-btn" data-level="INFO" onclick="setLogFilter('INFO', this)">INFO</button>
+            <button class="log-filter-btn" data-level="WARNING" onclick="setLogFilter('WARNING', this)">WARN</button>
+            <button class="log-filter-btn" data-level="ERROR" onclick="setLogFilter('ERROR', this)">ERRO</button>
+          </div>
+        </div>
+        <div class="logs-toolbar-right">
+          <label class="auto-scroll-label">
+            <input type="checkbox" id="auto-scroll" checked />
+            Auto-scroll
+          </label>
+          <button class="btn btn-ghost btn-sm" onclick="clearLogs()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Limpar Logs
+          </button>
+        </div>
+      </div>
+      <div class="logs-container" id="logs-container">
+        <div class="log-empty">Nenhum log ainda...</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════ MODAL: Adicionar Seriais ═══════════════════ -->
+  <div class="modal-overlay" id="modal-add" onclick="closeModal('modal-add')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Adicionar Seriais</h3>
+        <button class="modal-close" onclick="closeModal('modal-add')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="textarea-serials">Números de série (um por linha)</label>
+          <textarea id="textarea-serials" rows="10" placeholder="ABC123&#10;DEF456&#10;GHI789"></textarea>
+          <small>Cole a lista diretamente ou digite os seriais, um por linha</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-add')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitAddSerials()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ MODAL: Upload ═══════════════════ -->
+  <div class="modal-overlay" id="modal-upload" onclick="closeModal('modal-upload')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Importar Planilha</h3>
+        <button class="modal-close" onclick="closeModal('modal-upload')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()"
+             ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+          <p>Clique para selecionar ou arraste o arquivo</p>
+          <small>Suporta: .xlsx, .xls, .csv, .txt — Coluna A com os seriais</small>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="handleFileSelect(event)" />
+        <div id="file-preview" style="display:none">
+          <div class="file-preview-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span id="file-name"></span>
+            <button onclick="clearFileSelection()" class="btn-remove-file">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-upload')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-upload-submit" onclick="submitUpload()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          Importar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ TOASTS ═══════════════════ -->
+  <div id="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
