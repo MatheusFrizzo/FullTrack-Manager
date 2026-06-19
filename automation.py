@@ -155,6 +155,34 @@ class FullTrackAutomation:
 
     def open_map_via_menu(self) -> bool:
         self.log("INFO", "  🔧 Tentando abrir mapa via menu lateral...")
+        # Primeiro, tente localizar diretamente o link do menu "Mapa Geral 3.0" (não precisa do botão hamburguer)
+        direct_map_selectors = [
+            (By.CSS_SELECTOR, "a.item-menu[href*='mapaGeral_v3']"),
+            (By.CSS_SELECTOR, "a[href*='mapaGeral_v3']"),
+            (By.XPATH, "//a[contains(normalize-space(), 'Mapa Geral') and contains(@href, 'mapaGeral_v3')]")
+        ]
+
+        for by, sel in direct_map_selectors:
+            try:
+                map_link = WebDriverWait(self.driver, 3).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                self.log("INFO", f"    ✓ Link de mapa direto encontrado: {sel}")
+                try:
+                    href = map_link.get_attribute('href')
+                    if href:
+                        self.driver.get(href)
+                        time.sleep(2)
+                        return True
+                except Exception:
+                    try:
+                        map_link.click()
+                    except Exception:
+                        self.driver.execute_script("arguments[0].click();", map_link)
+                    time.sleep(2)
+                    return True
+            except TimeoutException:
+                continue
 
         menu_selectors = [
             (By.XPATH, "//nav//button[contains(@class, 'menu') or contains(@aria-label, 'menu') or contains(@aria-label, 'Menu')]"),
@@ -188,6 +216,17 @@ class FullTrackAutomation:
             try:
                 header_html = self.driver.find_element(By.TAG_NAME, "header").get_attribute("outerHTML")[:1000]
                 self.log("DEBUG", f"  Header HTML: {header_html}")
+            except Exception:
+                pass
+            # Mesmo sem botão, ainda podemos ter o link direto em algum lugar do DOM (tentar novamente buscando anchors)
+            try:
+                map_link = self.driver.find_element(By.CSS_SELECTOR, "a[href*='mapaGeral_v3']")
+                href = map_link.get_attribute('href')
+                if href:
+                    self.log("INFO", f"    ✓ Link de mapa encontrado no DOM: {href}")
+                    self.driver.get(href)
+                    time.sleep(2)
+                    return True
             except Exception:
                 pass
             return False
@@ -387,18 +426,31 @@ class FullTrackAutomation:
                     continue
 
             if not search_field:
+                # Fallback: procurar o primeiro input[type='text'] visível (muitos FT usam input sem id)
+                try:
+                    candidates = self.driver.find_elements(By.CSS_SELECTOR, "input[type='text'], input[type='search']")
+                    for c in candidates:
+                        try:
+                            if c.is_displayed() and c.is_enabled():
+                                search_field = c
+                                self.log("INFO", f"    ✓ Usando fallback input[type='text'] encontrado")
+                                break
+                        except Exception:
+                            continue
+                except Exception:
+                    pass
+
+            if not search_field:
                 sels_tried = "\n    ".join(search_selectors)
                 resultado["mensagem"] = "Campo de busca não encontrado — ajuste o seletor CSS"
                 self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 self.log("WARNING", f"  Seletores testados:\n    {sels_tried}")
-                
                 # Log do HTML para debug
                 try:
                     html_snippet = self.driver.page_source[:2000]
                     self.log("INFO", f"  HTML da página (primeiros 2000 chars):\n{html_snippet}")
                 except:
                     pass
-                
                 return resultado
 
             # === PASSO 3: Digitar e buscar ===
@@ -468,17 +520,24 @@ class FullTrackAutomation:
                     if el.tag_name == "span":
                         try:
                             comandos = el.find_element(By.XPATH, "ancestor::button")
-                            self.log("INFO", f"    ✓ Span encontrado, clicando botão pai")
+                            self.log("INFO", f"    ✓ Span encontrado, usando botão pai")
                         except Exception:
                             comandos = el
                     else:
                         comandos = el
-                    
-                    # Aguarda ser clicável antes de clicar
-                    WebDriverWait(self.driver, 3).until(EC.element_to_be_clickable((By.XPATH, "."))).click()
+
+                    # Tenta clicar no elemento encontrado
+                    try:
+                        comandos.click()
+                    except Exception:
+                        try:
+                            self.driver.execute_script("arguments[0].click();", comandos)
+                        except Exception:
+                            raise
+
                     self.log("INFO", f"    ✓ 'Comandos enviados' clicado")
                     break
-                except Exception as e:
+                except Exception:
                     self.log("INFO", f"    ✗ Não encontrado: {sel}")
                     continue
             
@@ -503,14 +562,12 @@ class FullTrackAutomation:
 
             # Tenta seletores específicos primeiro (CSS, depois XPATH)
             enviar_selectors = [
-                (By.XPATH, "//button[contains(normalize-space(), 'Enviar')]"),
-                (By.XPATH, "//button[contains(., 'Enviar')]"),
-                (By.CSS_SELECTOR, "button:contains('Enviar')"),
-                (By.CSS_SELECTOR, "div.btn.input-cmd.ft-button-div"),
-                (By.CSS_SELECTOR, "div[type='button'].btn.input-cmd.ft-button-div"),
-                (By.XPATH, "//div[@type='button' and contains(@class, 'ft-button-div')]"),
-                (By.XPATH, "//div[contains(@class, 'input-cmd') and contains(text(), 'Enviar')]"),
-                (By.XPATH, "//button[contains(text(), 'Bloquear')]"),
+                (By.XPATH, "//div[contains(@class, 'ft-button-div') and normalize-space()='Enviar']"),
+                (By.XPATH, "//div[@type='button' and contains(normalize-space(), 'Enviar') and contains(@class, 'ft-button-div') ]"),
+                (By.CSS_SELECTOR, "div.ft-button-div"),
+                (By.XPATH, "//button[contains(normalize-space(), 'Enviar') ]"),
+                (By.XPATH, "//button[contains(., 'Enviar') ]"),
+                (By.XPATH, "//button[contains(text(), 'Bloquear')]") ,
             ]
 
             enviado = False
@@ -521,7 +578,10 @@ class FullTrackAutomation:
                         EC.element_to_be_clickable((by, sel))
                     )
                     self.log("INFO", f"    ✓ Encontrado com: {sel}")
-                    btn.click()
+                    try:
+                        btn.click()
+                    except Exception:
+                        self.driver.execute_script("arguments[0].click();", btn)
                     enviado = True
                     time.sleep(2)
                     break
