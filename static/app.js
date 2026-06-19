@@ -17,6 +17,8 @@ const state = {
   selectedFile: null,
   pollInterval: null,
   logPollInterval: null,
+  serialPage: 1,
+  serialPageSize: 50,
 };
 
 // ─── API Layer ────────────────────────────────────────────────────────────────
@@ -197,6 +199,7 @@ async function refreshSerials() {
   try {
     const { data } = await api.serials.list(state.statusFilter || undefined);
     state.serials = data;
+    state.serialPage = 1;
     renderSerials();
   } catch (e) {
     toast('Erro ao carregar seriais: ' + e.message, 'error');
@@ -205,6 +208,7 @@ async function refreshSerials() {
 
 function applyFilter() {
   state.statusFilter = document.getElementById('filter-status').value;
+  state.serialPage = 1;
   refreshSerials();
 }
 
@@ -222,10 +226,18 @@ function renderSerials() {
           <small>Clique em "Adicionar Seriais" ou importe uma planilha</small>
         </div>
       </td></tr>`;
+    renderPagination(0, 1);
     return;
   }
 
-  tbody.innerHTML = state.serials.map(s => `
+  const total = state.serials.length;
+  const pageSize = state.serialPageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (state.serialPage > totalPages) state.serialPage = totalPages;
+  const start = (state.serialPage - 1) * pageSize;
+  const currentPageSerials = state.serials.slice(start, start + pageSize);
+
+  tbody.innerHTML = currentPageSerials.map(s => `
     <tr data-id="${s.id}">
       <td><span class="contract-cell" title="${escHtml(s.contrato || '')}">${escHtml(s.contrato || '—')}</span></td>
       <td><span class="serial-number">${escHtml(s.numero)}</span></td>
@@ -257,6 +269,47 @@ function renderSerials() {
         </button>
       </td>
     </tr>`).join('');
+
+  renderPagination(total, totalPages);
+}
+
+function renderPagination(total, totalPages) {
+  const container = document.getElementById('pagination-bar');
+  if (total <= state.serialPageSize) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="pagination">
+      <button class="btn btn-ghost btn-sm" onclick="goToSerialPage(1)" ${state.serialPage === 1 ? 'disabled' : ''}>Primeira</button>
+      <button class="btn btn-ghost btn-sm" onclick="goToSerialPage(${Math.max(1, state.serialPage - 1)})" ${state.serialPage === 1 ? 'disabled' : ''}>Anterior</button>
+      <span class="pagination-info">Página ${state.serialPage} de ${totalPages} · ${total} item(s)</span>
+      <button class="btn btn-ghost btn-sm" onclick="goToSerialPage(${Math.min(totalPages, state.serialPage + 1)})" ${state.serialPage === totalPages ? 'disabled' : ''}>Próxima</button>
+      <button class="btn btn-ghost btn-sm" onclick="goToSerialPage(${totalPages})" ${state.serialPage === totalPages ? 'disabled' : ''}>Última</button>
+    </div>`;
+}
+
+function goToSerialPage(page) {
+  state.serialPage = page;
+  renderSerials();
+}
+
+function clearSerials() {
+  const status = state.statusFilter || undefined;
+  const message = status
+    ? `Deseja limpar todos os seriais filtrados como '${state.statusFilter}'?`
+    : 'Deseja limpar todos os seriais da lista?';
+
+  if (!confirm(message)) return;
+  api.serials.clear(status)
+    .then(() => {
+      state.serialPage = 1;
+      refreshSerials();
+      fetchStats();
+      toast('Lista de seriais limpa', 'success');
+    })
+    .catch((e) => toast('Erro ao limpar seriais: ' + e.message, 'error'));
 }
 
 function renderBadge(status) {

@@ -159,6 +159,10 @@
               <option value="processando">Processando</option>
             </select>
           </div>
+          <button class="btn btn-danger btn-sm" onclick="clearSerials()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6v12"/><path d="M16 6v12"/><path d="M5 6l1-3h12l1 3"/></svg>
+            Limpar Lista
+          </button>
           <button class="btn btn-ghost btn-sm" onclick="refreshSerials()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             Atualizar
@@ -183,7 +187,10 @@
         <table class="data-table" id="serials-table">
           <thead>
             <tr>
+              <th>Contrato</th>
               <th>Serial</th>
+              <th>Cliente</th>
+              <th>Observação</th>
               <th>Status</th>
               <th>Mensagem</th>
               <th>Atualizado</th>
@@ -192,7 +199,7 @@
           </thead>
           <tbody id="serials-tbody">
             <tr class="empty-row">
-              <td colspan="5">
+              <td colspan="8">
                 <div class="empty-state">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -206,6 +213,7 @@
             </tr>
           </tbody>
         </table>
+        <div class="pagination-bar" id="pagination-bar"></div>
       </div>
 
     </section>
