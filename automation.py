@@ -75,6 +75,19 @@ class FullTrackAutomation:
                 pass
             self.driver = None
 
+    def _save_debug_html(self, name_prefix: str = "map_debug"):
+        try:
+            html = self.driver.page_source
+            url = self.driver.current_url
+            cookies = self.driver.get_cookies()
+            fname = f"debug_{name_prefix}_{int(time.time())}.html"
+            with open(fname, "w", encoding="utf-8") as f:
+                f.write(f"<!-- URL: {url} -->\n<!-- COOKIES: {cookies} -->\n")
+                f.write(html)
+            self.log("INFO", f"  ✓ Debug HTML salvo: {fname}")
+        except Exception as e:
+            self.log("ERROR", f"  ❌ Falha ao salvar debug HTML: {e}")
+
     # ─── Login ───────────────────────────────────────────────────────────────────
 
     def login(self) -> bool:
@@ -361,6 +374,10 @@ class FullTrackAutomation:
                         resultado["mensagem"] = "URL não carregou corretamente — verifique a URL configurada ou o menu de navegação"
                         self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                         self.log("ERROR", f"  HTML: {body_html[:300]}")
+                        try:
+                            self._save_debug_html('direct_fail')
+                        except Exception:
+                            pass
                         return resultado
                     try:
                         WebDriverWait(self.driver, 10).until(
@@ -373,7 +390,11 @@ class FullTrackAutomation:
                     if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
                         resultado["mensagem"] = "Mapa aberto pelo menu, mas a página continua com erro"
                         self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                        self.log("ERROR", f"  HTML: {body_html[:300]}")
+                            self.log("ERROR", f"  HTML: {body_html[:300]}")
+                            try:
+                                self._save_debug_html('menu_fail')
+                            except Exception:
+                                pass
                         return resultado
             else:
                 try:
@@ -401,6 +422,10 @@ class FullTrackAutomation:
                             resultado["mensagem"] = "Mapa aberto, mas a página continua com erro após fallback"
                             self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                             self.log("ERROR", f"  HTML: {body_html[:300]}")
+                            try:
+                                self._save_debug_html('fallback_fail')
+                            except Exception:
+                                pass
                             return resultado
                     else:
                         resultado["mensagem"] = "Mapa aberto, mas a página parece inválida e nenhuma URL direta está configurada"
