@@ -203,16 +203,21 @@ class FullTrackAutomation:
             search_field = None
             for sel in search_selectors:
                 try:
+                    self.log("INFO", f"    ↳ Tentando: {sel}")
                     search_field = WebDriverWait(self.driver, 5).until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
                     )
+                    self.log("INFO", f"    ✓ Seletor encontrado: {sel}")
                     break
                 except TimeoutException:
+                    self.log("INFO", f"    ✗ Seletor não encontrado: {sel}")
                     continue
 
             if not search_field:
+                sels_tried = "\n    ".join(search_selectors)
                 resultado["mensagem"] = "Campo de busca não encontrado — ajuste o seletor CSS"
                 self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                self.log("WARNING", f"  Seletores testados:\n    {sels_tried}")
                 return resultado
 
             # === PASSO 3: Digitar e buscar ===
