@@ -499,6 +499,27 @@ svg { display: block; }
   max-height: calc(100vh - 340px);
 }
 
+.pagination-bar {
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

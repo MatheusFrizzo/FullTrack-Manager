@@ -79,11 +79,10 @@ class FullTrackAutomation:
 
     def login(self) -> bool:
         """
-        Realiza login no FullTrack e garante que a página de mapa seja aberta.
+        Realiza login no FullTrack.
         """
         try:
             login_url = self.config.get("login_url") or self.config.get("fulltrack_url", "")
-            map_url = self.config.get("fulltrack_url", "")
 
             def wait_ready(timeout=10):
                 try:
@@ -94,63 +93,6 @@ class FullTrackAutomation:
                 except TimeoutException:
                     return False
 
-            def is_error_page():
-                html = self.driver.page_source.lower()
-                return "page not found" in html or "404" in html or len(html) < 500
-
-            def open_map_via_menu():
-                self.log("INFO", "  🔧 Tentando abrir mapa via menu lateral...")
-                menu_selectors = [
-                    (By.CSS_SELECTOR, "body > header > nav > div > div:nth-child(2) > a > i"),
-                    (By.CSS_SELECTOR, "i.fa-bars"),
-                    (By.XPATH, "//i[contains(@class, 'fa-bars') or contains(@class, 'fa fa-bars')]/.."),
-                    (By.XPATH, "//*[contains(@class, 'fa-bars')]")
-                ]
-                menu_button = None
-                for by, sel in menu_selectors:
-                    try:
-                        menu_button = WebDriverWait(self.driver, 5).until(
-                            EC.element_to_be_clickable((by, sel))
-                        )
-                        self.log("INFO", f"    ✓ Menu encontrado: {sel}")
-                        menu_button.click()
-                        time.sleep(2)
-                        break
-                    except TimeoutException:
-                        continue
-
-                if not menu_button:
-                    self.log("WARNING", "    ⚠️ Botão de menu não encontrado")
-                    return False
-
-                map_selectors = [
-                    (By.CSS_SELECTOR, "a.item-menu[href*='mapaGeral_v3']"),
-                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0') and contains(@href, 'mapaGeral_v3')])"),
-                    (By.XPATH, "//a[contains(., 'Mapa Geral') and contains(@href, 'mapaGeral_v3')])"),
-                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0')]"),
-                ]
-
-                for by, sel in map_selectors:
-                    try:
-                        map_link = WebDriverWait(self.driver, 5).until(
-                            EC.element_to_be_clickable((by, sel))
-                        )
-                        self.log("INFO", f"    ✓ Link de mapa encontrado: {sel}")
-                        original_windows = self.driver.window_handles
-                        map_link.click()
-                        time.sleep(3)
-
-                        if len(self.driver.window_handles) > len(original_windows):
-                            new_window = [w for w in self.driver.window_handles if w not in original_windows][0]
-                            self.driver.switch_to.window(new_window)
-                            self.log("INFO", "    ✓ Alternou para nova janela do mapa")
-                        return True
-                    except TimeoutException:
-                        continue
-
-                self.log("WARNING", "    ⚠️ Link de mapa não encontrado")
-                return False
-
             self.log("INFO", f"🌐 Acessando: {login_url}")
             self.driver.get(login_url)
             wait_ready(10)
@@ -159,13 +101,16 @@ class FullTrackAutomation:
             # Verifica se há formulário de login na página
             login_selectors = [
                 "input[type='email']",
+                "input[type='text'][placeholder*='e-mail' i]",
+                "input[type='text'][placeholder*='usuário' i]",
+                "input[type='text'][placeholder*='login' i]",
                 "input[name='email']",
                 "input[name='login']",
+                "input[name='usuario']",
+                "input[name='user']",
                 "input[id='email']",
                 "input[id='login']",
-                "input[placeholder*='e-mail' i]",
-                "input[placeholder*='usuário' i]",
-                "input[placeholder*='login' i]",
+                "input[id='usuario']",
             ]
 
             username_field = None
@@ -190,7 +135,7 @@ class FullTrackAutomation:
                 try:
                     login_btn = self.driver.find_element(
                         By.CSS_SELECTOR,
-                        "button[type='submit'], input[type='submit'], button.btn-login, button#login, button.login"
+                        "button[type='submit'], input[type='submit'], button.btn-login, button#login, button.login, button[name='login'], button[name='entrar'], input[type='button']"
                     )
                     login_btn.click()
                 except NoSuchElementException:
@@ -202,30 +147,75 @@ class FullTrackAutomation:
             else:
                 self.log("INFO", "✅ Sem tela de login detectada (acesso direto ou sessão ativa)")
 
-            # Após login, garantir que a página de mapa esteja aberta
-            if map_url:
-                self.log("INFO", f"  📍 Acessando mapa: {map_url}")
-                self.driver.get(map_url)
-                wait_ready(10)
-                time.sleep(3)
-
-                if is_error_page():
-                    self.log("WARNING", "  ⚠️ Mapa não carregou diretamente, tentando via menu")
-                    if not open_map_via_menu():
-                        self.log("ERROR", "❌ Falha ao abrir o mapa via menu")
-                        return False
-                    wait_ready(10)
-                    time.sleep(3)
-
-                if is_error_page():
-                    self.log("ERROR", "❌ Página de mapa continua com erro após tentativa")
-                    return False
-
             return True
 
         except Exception as e:
             self.log("ERROR", f"❌ Erro no login: {e}")
             return False
+
+    def open_map_via_menu(self) -> bool:
+        self.log("INFO", "  🔧 Tentando abrir mapa via menu lateral...")
+
+        menu_selectors = [
+            (By.CSS_SELECTOR, "button.menu-toggle, button.menu-btn, button.menu-button, .sidebar-toggle, .navbar-toggler, .btn-menu"),
+            (By.CSS_SELECTOR, "i.fa-bars, i.fas.fa-bars, span.menu-icon, .menu-icon"),
+            (By.XPATH, "//button[contains(@class, 'menu') or contains(@class, 'toggle') or contains(@aria-label, 'Menu') or contains(@aria-label, 'menu')]"),
+            (By.XPATH, "//*[contains(@class, 'fa-bars') or contains(@class, 'menu-toggle') or contains(@class, 'sidebar-toggle')]")
+        ]
+
+        menu_button = None
+        for by, sel in menu_selectors:
+            try:
+                menu_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                self.log("INFO", f"    ✓ Menu encontrado: {sel}")
+                try:
+                    menu_button.click()
+                except Exception:
+                    self.driver.execute_script("arguments[0].click();", menu_button)
+                time.sleep(2)
+                break
+            except TimeoutException:
+                continue
+
+        if not menu_button:
+            self.log("WARNING", "    ⚠️ Botão de menu não encontrado")
+            return False
+
+        map_selectors = [
+            (By.CSS_SELECTOR, "a[href*='mapaGeral_v3']"),
+            (By.CSS_SELECTOR, "a[href*='mapaGeral_v3'] span, a[href*='mapaGeral_v3'] div"),
+            (By.XPATH, "//a[contains(normalize-space(), 'Mapa Geral 3.0') and contains(@href, 'mapaGeral_v3')]") ,
+            (By.XPATH, "//a[contains(normalize-space(), 'Mapa Geral') and contains(@href, 'mapaGeral_v3')]") ,
+            (By.XPATH, "//a[contains(normalize-space(), 'Mapa Geral 3.0') or contains(normalize-space(), 'Mapa Geral')]") ,
+            (By.XPATH, "//li[normalize-space() = 'Mapa Geral 3.0' or contains(normalize-space(), 'Mapa Geral')]/a"),
+            (By.XPATH, "//div[contains(., 'Mapa Geral 3.0') and (contains(@class, 'menu') or contains(@class, 'sidebar'))]"),
+        ]
+
+        for by, sel in map_selectors:
+            try:
+                map_link = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                self.log("INFO", f"    ✓ Link de mapa encontrado: {sel}")
+                original_windows = self.driver.window_handles
+                try:
+                    map_link.click()
+                except Exception:
+                    self.driver.execute_script("arguments[0].click();", map_link)
+                time.sleep(3)
+
+                if len(self.driver.window_handles) > len(original_windows):
+                    new_window = [w for w in self.driver.window_handles if w not in original_windows][0]
+                    self.driver.switch_to.window(new_window)
+                    self.log("INFO", "    ✓ Alternou para nova janela do mapa")
+                return True
+            except TimeoutException:
+                continue
+
+        self.log("WARNING", "    ⚠️ Link de mapa não encontrado")
+        return False
 
     # ─── Bloqueio de Serial ──────────────────────────────────────────────────────
 
@@ -255,29 +245,78 @@ class FullTrackAutomation:
 
             # === PASSO 1: Voltar ao mapa ===
             url = self.config.get("fulltrack_url", "")
-            self.log("INFO", f"  📍 Acessando: {url}")
-            
-            self.driver.get(url)
-            
-            # Aguarda o documento estar pronto e o JS executar
-            try:
-                WebDriverWait(self.driver, 10).until(
-                    lambda driver: driver.execute_script("return document.readyState") == "complete"
-                )
-                self.log("INFO", f"  ✓ Página carregada (readyState=complete)")
-            except TimeoutException:
-                self.log("WARNING", f"  ⚠️  Timeout esperando página carregar")
-            
-            # Aguarda extra para JS popular a página
-            time.sleep(3)
-            
-            # Verifica se a página realmente carregou (não é "Page not found")
-            body_html = self.driver.page_source
-            if "Page not found" in body_html or "404" in body_html or len(body_html) < 500:
-                resultado["mensagem"] = "URL não carregou corretamente — verifique a URL configurada"
-                self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                self.log("ERROR", f"  HTML: {body_html[:300]}")
-                return resultado
+            self.log("INFO", "  🌐 Tentando abrir o mapa via menu primeiro...")
+            opened = self.open_map_via_menu()
+            if not opened:
+                if not url:
+                    resultado["mensagem"] = "Nenhuma URL de mapa configurada e o menu não foi encontrado"
+                    self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                    return resultado
+
+                self.log("INFO", f"  🔗 Abrindo mapa diretamente: {url}")
+                self.driver.get(url)
+                try:
+                    WebDriverWait(self.driver, 10).until(
+                        lambda driver: driver.execute_script("return document.readyState") == "complete"
+                    )
+                    self.log("INFO", f"  ✓ Página carregada (readyState=complete)")
+                except TimeoutException:
+                    self.log("WARNING", "  ⚠️ Timeout esperando página carregar")
+                time.sleep(3)
+
+                body_html = self.driver.page_source.lower()
+                if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                    self.log("WARNING", "  ⚠️ Falha ao abrir o mapa direto; tentando via menu")
+                    if not self.open_map_via_menu():
+                        resultado["mensagem"] = "URL não carregou corretamente — verifique a URL configurada ou o menu de navegação"
+                        self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                        self.log("ERROR", f"  HTML: {body_html[:300]}")
+                        return resultado
+                    try:
+                        WebDriverWait(self.driver, 10).until(
+                            lambda driver: driver.execute_script("return document.readyState") == "complete"
+                        )
+                    except TimeoutException:
+                        self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após o menu")
+                    time.sleep(3)
+                    body_html = self.driver.page_source.lower()
+                    if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                        resultado["mensagem"] = "Mapa aberto pelo menu, mas a página continua com erro"
+                        self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                        self.log("ERROR", f"  HTML: {body_html[:300]}")
+                        return resultado
+            else:
+                try:
+                    WebDriverWait(self.driver, 10).until(
+                        lambda driver: driver.execute_script("return document.readyState") == "complete"
+                    )
+                except TimeoutException:
+                    self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após menu")
+                time.sleep(3)
+                body_html = self.driver.page_source.lower()
+                if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                    self.log("WARNING", "  ⚠️ O mapa foi aberto pelo menu, mas a página parece inválida")
+                    if url:
+                        self.log("INFO", f"  🔁 Tentando abrir URL direta do mapa como fallback: {url}")
+                        self.driver.get(url)
+                        try:
+                            WebDriverWait(self.driver, 10).until(
+                                lambda driver: driver.execute_script("return document.readyState") == "complete"
+                            )
+                        except TimeoutException:
+                            self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após fallback")
+                        time.sleep(3)
+                        body_html = self.driver.page_source.lower()
+                        if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                            resultado["mensagem"] = "Mapa aberto, mas a página continua com erro após fallback"
+                            self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                            self.log("ERROR", f"  HTML: {body_html[:300]}")
+                            return resultado
+                    else:
+                        resultado["mensagem"] = "Mapa aberto, mas a página parece inválida e nenhuma URL direta está configurada"
+                        self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                        self.log("ERROR", f"  HTML: {body_html[:300]}")
+                        return resultado
 
             # === PASSO 2: Campo de busca ===
             self.log("INFO", f"  🔍 Localizando campo de busca...")
@@ -298,10 +337,18 @@ class FullTrackAutomation:
 
             search_selectors.extend([
                 "input[type='search']",
+                "input[type='text'][placeholder*='buscar' i]",
+                "input[type='text'][placeholder*='serial' i]",
+                "input[type='text'][placeholder*='número' i]",
                 "input[placeholder*='buscar' i]",
                 "input[placeholder*='serial' i]",
                 "input[placeholder*='número' i]",
-                "input[placeholder*='pesquisar' i]",
+                "input[name*='search' i]",
+                "input[name*='serial' i]",
+                "input[id*='search' i]",
+                "input[id*='serial' i]",
+                "input[class*='search' i]",
+                "input[class*='serial' i]",
                 "#busca",
                 "#search",
                 ".search-input",
