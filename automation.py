@@ -256,49 +256,35 @@ class FullTrackAutomation:
             # === PASSO 4: Clicar no resultado ===
             self.log("INFO", f"  👆 Aguardando resultado...")
 
-            # ⚠️ AJUSTAR: seletor do resultado da busca no mapa
-            result_selectors_css = [
-                ".resultado-item",
-                ".search-result-item",
-                ".device-result",
-                ".asset-item",
-                "[data-serial]",
-                ".list-group-item",
-            ]
-            result_selectors_xpath = [
-                f"//*[contains(text(), '{numero}')]",
-                f"//li[contains(., '{numero}')]",
-                f"//tr[contains(., '{numero}')]",
+            result_selectors = [
+                (By.CSS_SELECTOR, f"[data-serial='{numero}']"),
+                (By.XPATH, f"//*[contains(text(), '{numero}')] | //*[@data-serial='{numero}']"),
+                (By.XPATH, f"//div[contains(., '{numero}')]"),
+                (By.CSS_SELECTOR, ".resultado-item"),
+                (By.CSS_SELECTOR, ".search-result-item"),
+                (By.XPATH, f"//li[contains(., '{numero}')]"),
+                (By.XPATH, f"//tr[contains(., '{numero}')]"),
             ]
 
             clicked = False
-            for sel in result_selectors_css:
+            for by, sel in result_selectors:
                 try:
-                    el = WebDriverWait(self.driver, 4).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
+                    self.log("INFO", f"    ↳ Tentando: {sel}")
+                    el = WebDriverWait(self.driver, 3).until(
+                        EC.element_to_be_clickable((by, sel))
                     )
+                    self.log("INFO", f"    ✓ Encontrado com: {sel}")
                     el.click()
                     clicked = True
                     break
                 except Exception:
+                    self.log("INFO", f"    ✗ Não encontrado: {sel}")
                     continue
-
-            if not clicked:
-                for xp in result_selectors_xpath:
-                    try:
-                        el = WebDriverWait(self.driver, 4).until(
-                            EC.element_to_be_clickable((By.XPATH, xp))
-                        )
-                        el.click()
-                        clicked = True
-                        break
-                    except Exception:
-                        continue
 
             if not clicked:
                 resultado["status"] = "nao_encontrado"
                 resultado["mensagem"] = f"Serial '{numero}' não localizado no sistema"
-                self.log("WARNING", f"  ⚠️  {resultado['mensagem']}")
+                self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 return resultado
 
             self.log("INFO", f"  ✓ Resultado clicado")
@@ -306,47 +292,63 @@ class FullTrackAutomation:
 
             # === PASSO 5: Clicar em "Comandos enviados" ===
             self.log("INFO", f"  📋 Abrindo 'Comandos enviados'...")
-            try:
-                comandos = WebDriverWait(self.driver, self.config.get("timeout", 20)).until(
-                    EC.element_to_be_clickable((
-                        By.XPATH,
-                        "//*[contains(text(), 'Comandos enviados') or "
-                        "contains(text(), 'Comandos Enviados') or "
-                        "contains(text(), 'comandos enviados')]"
-                    ))
-                )
-                comandos.click()
-                time.sleep(2)
-                self.log("INFO", f"  ✓ 'Comandos enviados' aberto")
-
-            except TimeoutException:
-                resultado["mensagem"] = "'Comandos enviados' não encontrado — ajuste o seletor XPATH"
+            
+            # Tenta seletores específicos primeiro
+            comandos_selectors = [
+                (By.CSS_SELECTOR, "span[data-i18n='commands_sent']"),
+                (By.XPATH, "//span[contains(@data-i18n, 'commands_sent')]"),
+                (By.XPATH, "//*[contains(text(), 'Comandos enviados')]"),
+            ]
+            
+            comandos = None
+            for by, sel in comandos_selectors:
+                try:
+                    self.log("INFO", f"    ↳ Tentando: {sel}")
+                    comandos = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((by, sel))
+                    )
+                    self.log("INFO", f"    ✓ Encontrado com: {sel}")
+                    break
+                except TimeoutException:
+                    self.log("INFO", f"    ✗ Não encontrado: {sel}")
+                    continue
+            
+            if not comandos:
+                resultado["mensagem"] = "'Comandos enviados' não encontrado — ajuste o seletor"
                 self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 return resultado
+            
+            comandos.click()
+            time.sleep(2)
+            self.log("INFO", f"  ✓ 'Comandos enviados' aberto")
 
             # === PASSO 6: Clicar em "Enviar" (bloqueio) ===
             self.log("INFO", f"  🔒 Executando bloqueio...")
 
-            # ⚠️ AJUSTAR: seletor do botão de enviar/bloquear
-            enviar_xpaths = [
-                "//button[contains(text(), 'Enviar')]",
-                "//button[contains(text(), 'Bloquear')]",
-                "//input[@value='Enviar']",
-                "//input[@value='Bloquear']",
-                "//a[contains(text(), 'Enviar')]",
+            # Tenta seletores específicos primeiro (CSS, depois XPATH)
+            enviar_selectors = [
+                (By.CSS_SELECTOR, "div.btn.input-cmd.ft-button-div"),
+                (By.CSS_SELECTOR, "div[type='button'].btn.input-cmd.ft-button-div"),
+                (By.XPATH, "//div[@type='button' and contains(@class, 'ft-button-div')]"),
+                (By.XPATH, "//div[contains(@class, 'input-cmd') and contains(text(), 'Enviar')]"),
+                (By.XPATH, "//button[contains(text(), 'Enviar')]"),
+                (By.XPATH, "//button[contains(text(), 'Bloquear')]"),
             ]
 
             enviado = False
-            for xp in enviar_xpaths:
+            for by, sel in enviar_selectors:
                 try:
+                    self.log("INFO", f"    ↳ Tentando: {sel}")
                     btn = WebDriverWait(self.driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, xp))
+                        EC.element_to_be_clickable((by, sel))
                     )
+                    self.log("INFO", f"    ✓ Encontrado com: {sel}")
                     btn.click()
                     enviado = True
                     time.sleep(2)
                     break
-                except Exception:
+                except Exception as e:
+                    self.log("INFO", f"    ✗ Não encontrado: {sel}")
                     continue
 
             if enviado:
@@ -354,12 +356,6 @@ class FullTrackAutomation:
                 resultado["mensagem"] = "Serial bloqueado com sucesso"
                 self.log("INFO", f"  ✅ {numero} → BLOQUEADO!")
             else:
-                # Coleta texto da página como evidência
-                try:
-                    body_text = self.driver.find_element(By.TAG_NAME, "body").text[:300]
-                    resultado["resultado"] = body_text
-                except Exception:
-                    pass
                 resultado["status"] = "sucesso"
                 resultado["mensagem"] = "Processado (botão Enviar não localizado — ajuste o seletor)"
                 self.log("WARNING", f"  ⚠️  {numero}: Botão 'Enviar' não encontrado")
