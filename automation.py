@@ -176,14 +176,35 @@ class FullTrackAutomation:
 
             # === PASSO 1: Voltar ao mapa ===
             url = self.config.get("fulltrack_url", "")
+            self.log("INFO", f"  📍 Acessando: {url}")
+            
             self.driver.get(url)
-            time.sleep(2)
+            
+            # Aguarda o documento estar pronto e o JS executar
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    lambda driver: driver.execute_script("return document.readyState") == "complete"
+                )
+                self.log("INFO", f"  ✓ Página carregada (readyState=complete)")
+            except TimeoutException:
+                self.log("WARNING", f"  ⚠️  Timeout esperando página carregar")
+            
+            # Aguarda extra para JS popular a página
+            time.sleep(3)
+            
+            # Verifica se a página realmente carregou (não é "Page not found")
+            body_html = self.driver.page_source
+            if "Page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                resultado["mensagem"] = "URL não carregou corretamente — verifique a URL configurada"
+                self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                self.log("ERROR", f"  HTML: {body_html[:300]}")
+                return resultado
 
             # === PASSO 2: Campo de busca ===
             self.log("INFO", f"  🔍 Localizando campo de busca...")
 
             # 🔧 PARA TESTE: descomente a linha abaixo e preencha o seletor correto do site
-            hardcoded_selector = "#sidebar-component > div.sc-kNecGe.bIRPZc > div > div.sc-hOynoF.gNXSOi > input[type=text]"
+            hardcoded_selector = None
 
             # ⚠️ AJUSTAR: adicione o seletor real como primeiro da lista
             search_selectors = []
