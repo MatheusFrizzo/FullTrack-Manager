@@ -182,11 +182,20 @@ class FullTrackAutomation:
             # === PASSO 2: Campo de busca ===
             self.log("INFO", f"  🔍 Localizando campo de busca...")
 
+            # 🔧 PARA TESTE: descomente a linha abaixo e preencha o seletor correto do site
+            # hardcoded_selector = "seu_seletor_aqui"  # ex: input#id-do-campo, .classe-do-campo, etc
+            hardcoded_selector = None
+
             # ⚠️ AJUSTAR: adicione o seletor real como primeiro da lista
             search_selectors = []
+            if hardcoded_selector:
+                search_selectors.append(hardcoded_selector)
+                self.log("INFO", f"    (HARDCODED: {hardcoded_selector})")
+            
             configured_selector = self.config.get("search_selector", "")
             if configured_selector:
                 search_selectors.append(configured_selector)
+                self.log("INFO", f"    (configurado: {configured_selector})")
 
             search_selectors.extend([
                 "input[type='search']",
@@ -204,11 +213,20 @@ class FullTrackAutomation:
             for sel in search_selectors:
                 try:
                     self.log("INFO", f"    ↳ Tentando: {sel}")
-                    search_field = WebDriverWait(self.driver, 5).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
-                    )
-                    self.log("INFO", f"    ✓ Seletor encontrado: {sel}")
-                    break
+                    # Primeiro tenta ser clickable (espera 3s)
+                    try:
+                        search_field = WebDriverWait(self.driver, 3).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
+                        )
+                        self.log("INFO", f"    ✓ Seletor encontrado (clickable): {sel}")
+                        break
+                    except TimeoutException:
+                        # Se não for clickable, apenas verifica presença (espera 5s total)
+                        search_field = WebDriverWait(self.driver, 5).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, sel))
+                        )
+                        self.log("INFO", f"    ✓ Seletor encontrado (presente): {sel}")
+                        break
                 except TimeoutException:
                     self.log("INFO", f"    ✗ Seletor não encontrado: {sel}")
                     continue
@@ -218,6 +236,14 @@ class FullTrackAutomation:
                 resultado["mensagem"] = "Campo de busca não encontrado — ajuste o seletor CSS"
                 self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 self.log("WARNING", f"  Seletores testados:\n    {sels_tried}")
+                
+                # Log do HTML para debug
+                try:
+                    html_snippet = self.driver.page_source[:2000]
+                    self.log("INFO", f"  HTML da página (primeiros 2000 chars):\n{html_snippet}")
+                except:
+                    pass
+                
                 return resultado
 
             # === PASSO 3: Digitar e buscar ===
