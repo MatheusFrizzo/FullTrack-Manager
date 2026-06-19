@@ -390,11 +390,11 @@ class FullTrackAutomation:
                     if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
                         resultado["mensagem"] = "Mapa aberto pelo menu, mas a página continua com erro"
                         self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                            self.log("ERROR", f"  HTML: {body_html[:300]}")
-                            try:
-                                self._save_debug_html('menu_fail')
-                            except Exception:
-                                pass
+                        self.log("ERROR", f"  HTML: {body_html[:300]}")
+                        try:
+                            self._save_debug_html('menu_fail')
+                        except Exception:
+                            pass
                         return resultado
             else:
                 try:
