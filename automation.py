@@ -247,18 +247,60 @@ class FullTrackAutomation:
                     EC.element_to_be_clickable((by, sel))
                 )
                 self.log("INFO", f"    ✓ Link de mapa encontrado: {sel}")
-                original_windows = self.driver.window_handles
+                # Set Referer header to improve server-side routing for SPA
                 try:
-                    map_link.click()
+                    referer = self.config.get('login_url') or self.config.get('fulltrack_url')
+                    if referer:
+                        self.driver.execute_cdp_cmd('Network.setExtraHTTPHeaders', { 'headers': {'referer': referer} })
                 except Exception:
-                    self.driver.execute_script("arguments[0].click();", map_link)
-                time.sleep(3)
+                    pass
 
-                if len(self.driver.window_handles) > len(original_windows):
-                    new_window = [w for w in self.driver.window_handles if w not in original_windows][0]
-                    self.driver.switch_to.window(new_window)
-                    self.log("INFO", "    ✓ Alternou para nova janela do mapa")
-                return True
+                href = None
+                try:
+                    href = map_link.get_attribute('href')
+                except Exception:
+                    href = None
+
+                # Try opening in a new window (simulates user clicking a link with target=_blank)
+                try:
+                    if href:
+                        self.driver.execute_script("window.open(arguments[0], '_blank');", href)
+                    else:
+                        try:
+                            map_link.click()
+                        except Exception:
+                            self.driver.execute_script("arguments[0].click();", map_link)
+
+                    time.sleep(1)
+                    new_windows = [w for w in self.driver.window_handles if w != self.driver.current_window_handle]
+                    if new_windows:
+                        self.driver.switch_to.window(new_windows[-1])
+                        self.log("INFO", "    ✓ Alternou para nova janela do mapa")
+                    else:
+                        # If no new window appeared, ensure we're on the href
+                        if href:
+                            self.driver.get(href)
+
+                except Exception:
+                    # fallback to click
+                    try:
+                        map_link.click()
+                    except Exception:
+                        try:
+                            self.driver.execute_script("arguments[0].click();", map_link)
+                        except Exception:
+                            pass
+
+                # Aguarda por indicadores do mapa (containers típicos) por até 20s
+                try:
+                    WebDriverWait(self.driver, 20).until(
+                        lambda d: d.find_elements(By.CSS_SELECTOR, "div.leaflet-container, .ol-viewport, #map, .mapboxgl-canvas, .map-container")
+                    )
+                    self.log("INFO", "    ✓ Indicador de mapa detectado")
+                    return True
+                except TimeoutException:
+                    time.sleep(2)
+                    return True
             except TimeoutException:
                 continue
 
