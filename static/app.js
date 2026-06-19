@@ -470,6 +470,7 @@ async function loadConfig() {
     document.getElementById('pass-hint').textContent = data.password_set
       ? 'Senha salva. Deixe em branco para manter a atual.'
       : 'Nenhuma senha salva ainda.';
+    document.getElementById('input-login-url').value = data.login_url || '';
     document.getElementById('input-url').value = data.fulltrack_url || '';
     document.getElementById('input-search-selector').value = data.search_selector || '';
     document.getElementById('input-timeout').value = data.timeout || 20;
@@ -499,6 +500,7 @@ async function saveCredentials(e) {
 async function saveAutomation(e) {
   e.preventDefault();
   const payload = {
+    login_url: document.getElementById('input-login-url').value.trim(),
     fulltrack_url: document.getElementById('input-url').value.trim(),
     search_selector: document.getElementById('input-search-selector').value.trim(),
     timeout: document.getElementById('input-timeout').value,

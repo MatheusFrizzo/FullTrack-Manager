@@ -281,8 +281,13 @@
           </div>
           <form class="settings-form" id="form-automation" onsubmit="saveAutomation(event)">
             <div class="form-group">
+              <label for="input-login-url">URL de login do FullTrack</label>
+              <input type="url" id="input-login-url" placeholder="https://.../emp/..." />
+              <small>Use a URL da tela de login caso o FullTrack esteja em uma aplicação separada.</small>
+            </div>
+            <div class="form-group">
               <label for="input-url">URL do FullTrack</label>
-              <input type="url" id="input-url" placeholder="https://..." />
+              <input type="url" id="input-url" placeholder="https://.../mapaGeral_v3/#/" />
             </div>
             <div class="form-group">
               <label for="input-search-selector">Seletor CSS do campo de busca</label>

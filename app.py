@@ -350,7 +350,7 @@ def get_config():
 def save_config():
     data = request.get_json(force=True) or {}
 
-    str_fields = ["username", "fulltrack_url", "timeout", "delay_between", "search_selector"]
+    str_fields = ["username", "login_url", "fulltrack_url", "timeout", "delay_between", "search_selector"]
     for key in str_fields:
         if key in data:
             db.set_setting(key, str(data[key]))

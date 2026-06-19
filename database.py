@@ -50,6 +50,7 @@ class Database:
                 );
 
                 INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES
+                    ('login_url', 'https://12308-htm-indust-de-equip-eletro-eletronicos-ltda.fulltrackapp.com/emp/12308-htm-indust-de-equip-eletro-eletronicos-ltda'),
                     ('fulltrack_url', 'https://12308-htm-indust-de-equip-eletro-eletronicos-ltda.fulltrackapp.com/mapaGeral_v3/#/'),
                     ('username', ''),
                     ('password', ''),
@@ -167,6 +168,7 @@ class Database:
 
     def get_config(self) -> dict:
         return {
+            "login_url": self.get_setting("login_url"),
             "fulltrack_url": self.get_setting("fulltrack_url"),
             "headless": self.get_setting("headless", "true").lower() == "true",
             "timeout": int(self.get_setting("timeout", "20")),

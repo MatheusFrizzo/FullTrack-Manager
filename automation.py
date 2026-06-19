@@ -79,16 +79,82 @@ class FullTrackAutomation:
 
     def login(self) -> bool:
         """
-        Realiza login no FullTrack.
-
-        ⚠️ AJUSTAR: Se o site tiver uma página de login separada antes de
-        acessar o mapa, os seletores abaixo precisam ser inspecionados com F12.
+        Realiza login no FullTrack e garante que a página de mapa seja aberta.
         """
         try:
-            url = self.config.get("fulltrack_url", "")
-            self.log("INFO", f"🌐 Acessando: {url}")
-            self.driver.get(url)
-            time.sleep(3)
+            login_url = self.config.get("login_url") or self.config.get("fulltrack_url", "")
+            map_url = self.config.get("fulltrack_url", "")
+
+            def wait_ready(timeout=10):
+                try:
+                    WebDriverWait(self.driver, timeout).until(
+                        lambda d: d.execute_script("return document.readyState") == "complete"
+                    )
+                    return True
+                except TimeoutException:
+                    return False
+
+            def is_error_page():
+                html = self.driver.page_source.lower()
+                return "page not found" in html or "404" in html or len(html) < 500
+
+            def open_map_via_menu():
+                self.log("INFO", "  🔧 Tentando abrir mapa via menu lateral...")
+                menu_selectors = [
+                    (By.CSS_SELECTOR, "body > header > nav > div > div:nth-child(2) > a > i"),
+                    (By.CSS_SELECTOR, "i.fa-bars"),
+                    (By.XPATH, "//i[contains(@class, 'fa-bars') or contains(@class, 'fa fa-bars')]/.."),
+                    (By.XPATH, "//*[contains(@class, 'fa-bars')]")
+                ]
+                menu_button = None
+                for by, sel in menu_selectors:
+                    try:
+                        menu_button = WebDriverWait(self.driver, 5).until(
+                            EC.element_to_be_clickable((by, sel))
+                        )
+                        self.log("INFO", f"    ✓ Menu encontrado: {sel}")
+                        menu_button.click()
+                        time.sleep(2)
+                        break
+                    except TimeoutException:
+                        continue
+
+                if not menu_button:
+                    self.log("WARNING", "    ⚠️ Botão de menu não encontrado")
+                    return False
+
+                map_selectors = [
+                    (By.CSS_SELECTOR, "a.item-menu[href*='mapaGeral_v3']"),
+                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0') and contains(@href, 'mapaGeral_v3')"]"),
+                    (By.XPATH, "//a[contains(., 'Mapa Geral') and contains(@href, 'mapaGeral_v3')]"),
+                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0')]")
+                ]
+
+                for by, sel in map_selectors:
+                    try:
+                        map_link = WebDriverWait(self.driver, 5).until(
+                            EC.element_to_be_clickable((by, sel))
+                        )
+                        self.log("INFO", f"    ✓ Link de mapa encontrado: {sel}")
+                        original_windows = self.driver.window_handles
+                        map_link.click()
+                        time.sleep(3)
+
+                        if len(self.driver.window_handles) > len(original_windows):
+                            new_window = [w for w in self.driver.window_handles if w not in original_windows][0]
+                            self.driver.switch_to.window(new_window)
+                            self.log("INFO", "    ✓ Alternou para nova janela do mapa")
+                        return True
+                    except TimeoutException:
+                        continue
+
+                self.log("WARNING", "    ⚠️ Link de mapa não encontrado")
+                return False
+
+            self.log("INFO", f"🌐 Acessando: {login_url}")
+            self.driver.get(login_url)
+            wait_ready(10)
+            time.sleep(2)
 
             # Verifica se há formulário de login na página
             login_selectors = [
@@ -112,36 +178,49 @@ class FullTrackAutomation:
                 except TimeoutException:
                     continue
 
-            if not username_field:
-                # Sem tela de login detectada — acesso direto
-                self.log("INFO", "✅ Sem tela de login (acesso direto ou sessão ativa)")
-                return True
+            if username_field:
+                self.log("INFO", "🔐 Tela de login detectada, autenticando...")
+                username_field.clear()
+                username_field.send_keys(self.credentials.get("username", ""))
 
-            self.log("INFO", "🔐 Tela de login detectada, autenticando...")
+                password_field = self.driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+                password_field.clear()
+                password_field.send_keys(self.credentials.get("password", ""))
 
-            # Preenche usuário
-            username_field.clear()
-            username_field.send_keys(self.credentials.get("username", ""))
+                try:
+                    login_btn = self.driver.find_element(
+                        By.CSS_SELECTOR,
+                        "button[type='submit'], input[type='submit'], button.btn-login, button#login, button.login"
+                    )
+                    login_btn.click()
+                except NoSuchElementException:
+                    password_field.send_keys(Keys.RETURN)
 
-            # ⚠️ AJUSTAR: seletor do campo senha
-            password_field = self.driver.find_element(
-                By.CSS_SELECTOR, "input[type='password']"
-            )
-            password_field.clear()
-            password_field.send_keys(self.credentials.get("password", ""))
+                wait_ready(15)
+                time.sleep(2)
+                self.log("INFO", "✅ Login realizado")
+            else:
+                self.log("INFO", "✅ Sem tela de login detectada (acesso direto ou sessão ativa)")
 
-            # ⚠️ AJUSTAR: seletor do botão de login
-            try:
-                login_btn = self.driver.find_element(
-                    By.CSS_SELECTOR,
-                    "button[type='submit'], input[type='submit'], button.btn-login, button#login, button.login"
-                )
-                login_btn.click()
-            except NoSuchElementException:
-                password_field.send_keys(Keys.RETURN)
+            # Após login, garantir que a página de mapa esteja aberta
+            if map_url:
+                self.log("INFO", f"  📍 Acessando mapa: {map_url}")
+                self.driver.get(map_url)
+                wait_ready(10)
+                time.sleep(3)
 
-            time.sleep(5)
-            self.log("INFO", "✅ Login realizado")
+                if is_error_page():
+                    self.log("WARNING", "  ⚠️ Mapa não carregou diretamente, tentando via menu")
+                    if not open_map_via_menu():
+                        self.log("ERROR", "❌ Falha ao abrir o mapa via menu")
+                        return False
+                    wait_ready(10)
+                    time.sleep(3)
+
+                if is_error_page():
+                    self.log("ERROR", "❌ Página de mapa continua com erro após tentativa")
+                    return False
+
             return True
 
         except Exception as e:
