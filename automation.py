@@ -157,6 +157,10 @@ class FullTrackAutomation:
         self.log("INFO", "  🔧 Tentando abrir mapa via menu lateral...")
 
         menu_selectors = [
+            (By.XPATH, "//nav//button[contains(@class, 'menu') or contains(@aria-label, 'menu') or contains(@aria-label, 'Menu')]"),
+            (By.XPATH, "//header//button[contains(@class, 'toggle') or contains(@class, 'hamburger')]"),
+            (By.CSS_SELECTOR, "header button.menu-toggle, header button.hamburger, nav button"),
+            (By.XPATH, "//button[.//i[contains(@class, 'fa-bars')]]"),
             (By.CSS_SELECTOR, "button.menu-toggle, button.menu-btn, button.menu-button, .sidebar-toggle, .navbar-toggler, .btn-menu"),
             (By.CSS_SELECTOR, "i.fa-bars, i.fas.fa-bars, span.menu-icon, .menu-icon"),
             (By.XPATH, "//button[contains(@class, 'menu') or contains(@class, 'toggle') or contains(@aria-label, 'Menu') or contains(@aria-label, 'menu')]"),
@@ -181,6 +185,11 @@ class FullTrackAutomation:
 
         if not menu_button:
             self.log("WARNING", "    ⚠️ Botão de menu não encontrado")
+            try:
+                header_html = self.driver.find_element(By.TAG_NAME, "header").get_attribute("outerHTML")[:1000]
+                self.log("DEBUG", f"  Header HTML: {header_html}")
+            except Exception:
+                pass
             return False
 
         map_selectors = [
@@ -440,10 +449,11 @@ class FullTrackAutomation:
             # === PASSO 5: Clicar em "Comandos enviados" ===
             self.log("INFO", f"  📋 Abrindo 'Comandos enviados'...")
             
-            # Tenta seletores específicos primeiro
+            # Tenta seletores específicos primeiro - click no botão PAI, não no span
             comandos_selectors = [
+                (By.XPATH, "//button[.//span[@data-i18n='commands_sent']]"),
                 (By.CSS_SELECTOR, "span[data-i18n='commands_sent']"),
-                (By.XPATH, "//span[contains(@data-i18n, 'commands_sent')]"),
+                (By.XPATH, "//span[@data-i18n='commands_sent']"),
                 (By.XPATH, "//*[contains(text(), 'Comandos enviados')]"),
             ]
             
@@ -451,12 +461,24 @@ class FullTrackAutomation:
             for by, sel in comandos_selectors:
                 try:
                     self.log("INFO", f"    ↳ Tentando: {sel}")
-                    comandos = WebDriverWait(self.driver, 5).until(
-                        EC.element_to_be_clickable((by, sel))
+                    el = WebDriverWait(self.driver, 5).until(
+                        EC.presence_of_element_located((by, sel))
                     )
-                    self.log("INFO", f"    ✓ Encontrado com: {sel}")
+                    # Se encontrou um span, sobe para o botão pai
+                    if el.tag_name == "span":
+                        try:
+                            comandos = el.find_element(By.XPATH, "ancestor::button")
+                            self.log("INFO", f"    ✓ Span encontrado, clicando botão pai")
+                        except Exception:
+                            comandos = el
+                    else:
+                        comandos = el
+                    
+                    # Aguarda ser clicável antes de clicar
+                    WebDriverWait(self.driver, 3).until(EC.element_to_be_clickable((By.XPATH, "."))).click()
+                    self.log("INFO", f"    ✓ 'Comandos enviados' clicado")
                     break
-                except TimeoutException:
+                except Exception as e:
                     self.log("INFO", f"    ✗ Não encontrado: {sel}")
                     continue
             
@@ -465,20 +487,29 @@ class FullTrackAutomation:
                 self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 return resultado
             
-            comandos.click()
             time.sleep(2)
-            self.log("INFO", f"  ✓ 'Comandos enviados' aberto")
+            
+            # Aguarda pela h4 de confirmação
+            try:
+                WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "h4[data-i18n='commands_detail']"))
+                )
+                self.log("INFO", f"  ✓ 'Comandos enviados' aberto (confirmado)")
+            except TimeoutException:
+                self.log("WARNING", f"  ⚠️ 'Comandos enviados' clicado mas confirmação não apareceu")
 
             # === PASSO 6: Clicar em "Enviar" (bloqueio) ===
             self.log("INFO", f"  🔒 Executando bloqueio...")
 
             # Tenta seletores específicos primeiro (CSS, depois XPATH)
             enviar_selectors = [
+                (By.XPATH, "//button[contains(normalize-space(), 'Enviar')]"),
+                (By.XPATH, "//button[contains(., 'Enviar')]"),
+                (By.CSS_SELECTOR, "button:contains('Enviar')"),
                 (By.CSS_SELECTOR, "div.btn.input-cmd.ft-button-div"),
                 (By.CSS_SELECTOR, "div[type='button'].btn.input-cmd.ft-button-div"),
                 (By.XPATH, "//div[@type='button' and contains(@class, 'ft-button-div')]"),
                 (By.XPATH, "//div[contains(@class, 'input-cmd') and contains(text(), 'Enviar')]"),
-                (By.XPATH, "//button[contains(text(), 'Enviar')]"),
                 (By.XPATH, "//button[contains(text(), 'Bloquear')]"),
             ]
 
