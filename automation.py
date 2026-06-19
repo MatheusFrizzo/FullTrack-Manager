@@ -125,9 +125,9 @@ class FullTrackAutomation:
 
                 map_selectors = [
                     (By.CSS_SELECTOR, "a.item-menu[href*='mapaGeral_v3']"),
-                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0') and contains(@href, 'mapaGeral_v3')"]"),
-                    (By.XPATH, "//a[contains(., 'Mapa Geral') and contains(@href, 'mapaGeral_v3')]"),
-                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0')]")
+                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0') and contains(@href, 'mapaGeral_v3')])"),
+                    (By.XPATH, "//a[contains(., 'Mapa Geral') and contains(@href, 'mapaGeral_v3')])"),
+                    (By.XPATH, "//a[contains(., 'Mapa Geral 3.0')]"),
                 ]
 
                 for by, sel in map_selectors:
