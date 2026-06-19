@@ -471,6 +471,7 @@ async function loadConfig() {
       ? 'Senha salva. Deixe em branco para manter a atual.'
       : 'Nenhuma senha salva ainda.';
     document.getElementById('input-url').value = data.fulltrack_url || '';
+    document.getElementById('input-search-selector').value = data.search_selector || '';
     document.getElementById('input-timeout').value = data.timeout || 20;
     document.getElementById('input-delay').value = data.delay_between || 1;
     document.getElementById('input-headless').checked = data.headless !== false;
@@ -499,6 +500,7 @@ async function saveAutomation(e) {
   e.preventDefault();
   const payload = {
     fulltrack_url: document.getElementById('input-url').value.trim(),
+    search_selector: document.getElementById('input-search-selector').value.trim(),
     timeout: document.getElementById('input-timeout').value,
     delay_between: document.getElementById('input-delay').value,
     headless: document.getElementById('input-headless').checked,

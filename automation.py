@@ -183,7 +183,12 @@ class FullTrackAutomation:
             self.log("INFO", f"  🔍 Localizando campo de busca...")
 
             # ⚠️ AJUSTAR: adicione o seletor real como primeiro da lista
-            search_selectors = [
+            search_selectors = []
+            configured_selector = self.config.get("search_selector", "")
+            if configured_selector:
+                search_selectors.append(configured_selector)
+
+            search_selectors.extend([
                 "input[type='search']",
                 "input[placeholder*='buscar' i]",
                 "input[placeholder*='serial' i]",
@@ -193,7 +198,7 @@ class FullTrackAutomation:
                 "#search",
                 ".search-input",
                 ".input-busca",
-            ]
+            ])
 
             search_field = None
             for sel in search_selectors:

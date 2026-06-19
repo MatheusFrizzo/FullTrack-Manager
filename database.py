@@ -55,7 +55,8 @@ class Database:
                     ('password', ''),
                     ('headless', 'true'),
                     ('timeout', '20'),
-                    ('delay_between', '1');
+                    ('delay_between', '1'),
+                    ('search_selector', '');
             """)
             existing_columns = [row['name'] for row in conn.execute("PRAGMA table_info(serials)").fetchall()]
             if 'contrato' not in existing_columns:
@@ -170,6 +171,7 @@ class Database:
             "headless": self.get_setting("headless", "true").lower() == "true",
             "timeout": int(self.get_setting("timeout", "20")),
             "delay_between": int(self.get_setting("delay_between", "1")),
+            "search_selector": self.get_setting("search_selector", ""),
         }
 
     def get_credentials(self) -> dict:
