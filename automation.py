@@ -183,8 +183,7 @@ class FullTrackAutomation:
             self.log("INFO", f"  🔍 Localizando campo de busca...")
 
             # 🔧 PARA TESTE: descomente a linha abaixo e preencha o seletor correto do site
-            # hardcoded_selector = "seu_seletor_aqui"  # ex: input#id-do-campo, .classe-do-campo, etc
-            hardcoded_selector = None
+            hardcoded_selector = "#sidebar-component > div.sc-kNecGe.bIRPZc > div > div.sc-hOynoF.gNXSOi > input[type=text]"
 
             # ⚠️ AJUSTAR: adicione o seletor real como primeiro da lista
             search_selectors = []
