@@ -212,7 +212,7 @@ function renderSerials() {
   const tbody = document.getElementById('serials-tbody');
   if (!state.serials.length) {
     tbody.innerHTML = `
-      <tr class="empty-row"><td colspan="5">
+      <tr class="empty-row"><td colspan="8">
         <div class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -227,7 +227,10 @@ function renderSerials() {
 
   tbody.innerHTML = state.serials.map(s => `
     <tr data-id="${s.id}">
+      <td><span class="contract-cell" title="${escHtml(s.contrato || '')}">${escHtml(s.contrato || '—')}</span></td>
       <td><span class="serial-number">${escHtml(s.numero)}</span></td>
+      <td><span class="client-cell" title="${escHtml(s.cliente || '')}">${escHtml(s.cliente || '—')}</span></td>
+      <td><span class="note-cell" title="${escHtml(s.observacao || '')}">${escHtml(s.observacao || '—')}</span></td>
       <td>${renderBadge(s.status)}</td>
       <td><span class="msg-cell" title="${escHtml(s.mensagem || '')}">${escHtml(s.mensagem || '—')}</span></td>
       <td><span class="date-cell">${formatDate(s.atualizado_em)}</span></td>

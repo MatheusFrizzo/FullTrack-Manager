@@ -184,7 +184,11 @@ def upload_serials():
 
     f = request.files["file"]
     fname = (f.filename or "").lower()
-    numbers = []
+    records = []
+
+    def is_header_row(row):
+        header = " ".join(str(cell or "").strip().lower() for cell in row)
+        return any(keyword in header for keyword in ["chave contrato", "numero de série", "número de série", "nome cliente", "observação", "observacao", "serial"])
 
     try:
         if fname.endswith((".xlsx", ".xls")):
@@ -193,24 +197,57 @@ def upload_serials():
             wb = openpyxl.load_workbook(BytesIO(f.read()), read_only=True, data_only=True)
             ws = wb.active
             for row in ws.iter_rows(values_only=True):
-                cell = row[0] if row else None
-                if cell is not None and str(cell).strip():
-                    numbers.append(str(cell).strip())
+                if not row or all(cell is None or str(cell).strip() == "" for cell in row):
+                    continue
+                if is_header_row(row):
+                    continue
+
+                contrato = str(row[0]).strip() if len(row) > 0 and row[0] is not None else ""
+                numero = str(row[1]).strip() if len(row) > 1 and row[1] is not None and str(row[1]).strip() else contrato
+                cliente = str(row[2]).strip() if len(row) > 2 and row[2] is not None else ""
+                observacao = str(row[3]).strip() if len(row) > 3 and row[3] is not None else ""
+                if numero:
+                    records.append((numero, contrato, cliente, observacao))
 
         elif fname.endswith(".csv"):
             import csv
             from io import StringIO
             for row in csv.reader(StringIO(f.read().decode("utf-8-sig"))):
-                if row and row[0].strip():
-                    numbers.append(row[0].strip())
+                if not row or all(not cell.strip() for cell in row):
+                    continue
+                if is_header_row(row):
+                    continue
+
+                contrato = row[0].strip() if len(row) > 0 else ""
+                numero = row[1].strip() if len(row) > 1 and row[1].strip() else contrato
+                cliente = row[2].strip() if len(row) > 2 else ""
+                observacao = row[3].strip() if len(row) > 3 else ""
+                if numero:
+                    records.append((numero, contrato, cliente, observacao))
 
         else:
             for line in f.read().decode("utf-8").splitlines():
-                if line.strip():
-                    numbers.append(line.strip())
+                if not line.strip():
+                    continue
+                parts = [p.strip() for p in line.split("\t") if p.strip()]
+                if len(parts) == 0:
+                    continue
+                if len(parts) == 1:
+                    records.append((parts[0], "", "", ""))
+                else:
+                    contrato = parts[0]
+                    numero = parts[1]
+                    cliente = parts[2] if len(parts) > 2 else ""
+                    observacao = parts[3] if len(parts) > 3 else ""
+                    if numero:
+                        records.append((numero, contrato, cliente, observacao))
 
-        added = sum(1 for n in numbers if db.add_serial(n))
-        return jsonify(success=True, added=added, duplicates=len(numbers) - added, total=len(numbers))
+        added = 0
+        for numero, contrato, cliente, observacao in records:
+            if db.add_serial(numero, contrato, cliente, observacao):
+                added += 1
+
+        return jsonify(success=True, added=added, duplicates=len(records) - added, total=len(records))
 
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500

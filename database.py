@@ -26,6 +26,9 @@ class Database:
                 CREATE TABLE IF NOT EXISTS serials (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     numero TEXT UNIQUE NOT NULL,
+                    contrato TEXT DEFAULT '',
+                    cliente TEXT DEFAULT '',
+                    observacao TEXT DEFAULT '',
                     status TEXT DEFAULT 'pendente',
                     mensagem TEXT DEFAULT '',
                     resultado TEXT DEFAULT '',
@@ -54,17 +57,24 @@ class Database:
                     ('timeout', '20'),
                     ('delay_between', '1');
             """)
+            existing_columns = [row['name'] for row in conn.execute("PRAGMA table_info(serials)").fetchall()]
+            if 'contrato' not in existing_columns:
+                conn.execute("ALTER TABLE serials ADD COLUMN contrato TEXT DEFAULT ''")
+            if 'cliente' not in existing_columns:
+                conn.execute("ALTER TABLE serials ADD COLUMN cliente TEXT DEFAULT ''")
+            if 'observacao' not in existing_columns:
+                conn.execute("ALTER TABLE serials ADD COLUMN observacao TEXT DEFAULT ''")
 
     # ─── Serials ────────────────────────────────────────────────────────────────
 
-    def add_serial(self, numero: str) -> bool:
+    def add_serial(self, numero: str, contrato: str = '', cliente: str = '', observacao: str = '') -> bool:
         """Adiciona um serial. Retorna True se inserido, False se duplicado."""
         try:
             with self.get_conn() as conn:
                 now = datetime.now().isoformat()
                 conn.execute(
-                    "INSERT INTO serials (numero, status, criado_em, atualizado_em) VALUES (?, 'pendente', ?, ?)",
-                    (numero.strip(), now, now),
+                    "INSERT INTO serials (numero, contrato, cliente, observacao, status, criado_em, atualizado_em) VALUES (?, ?, ?, ?, 'pendente', ?, ?)",
+                    (numero.strip(), contrato.strip(), cliente.strip(), observacao.strip(), now, now),
                 )
                 return True
         except sqlite3.IntegrityError:
