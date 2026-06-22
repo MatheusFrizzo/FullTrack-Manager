@@ -81,8 +81,18 @@ class FullTrackAutomation:
             url = self.driver.current_url
             cookies = self.driver.get_cookies()
             fname = f"debug_{name_prefix}_{int(time.time())}.html"
+            
+            # Obter logs do console do navegador
+            console_log_str = ""
+            try:
+                browser_logs = self.driver.get_log('browser')
+                console_log_str = "\n".join([f"[{entry['level']}] {entry['timestamp']} - {entry['message']}" for entry in browser_logs])
+            except Exception as e:
+                console_log_str = f"Falha ao obter logs: {e}"
+
             with open(fname, "w", encoding="utf-8") as f:
                 f.write(f"<!-- URL: {url} -->\n<!-- COOKIES: {cookies} -->\n")
+                f.write(f"<!-- CONSOLE LOGS:\n{console_log_str}\n-->\n")
                 f.write(html)
             self.log("INFO", f"  ✓ Debug HTML salvo: {fname}")
         except Exception as e:
