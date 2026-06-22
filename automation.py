@@ -88,6 +88,23 @@ class FullTrackAutomation:
         except Exception as e:
             self.log("ERROR", f"  ❌ Falha ao salvar debug HTML: {e}")
 
+    def _is_error_page(self) -> bool:
+        """Verifica se a página atual é um erro 404 ou página não encontrada de forma robusta"""
+        try:
+            title = (self.driver.title or "").lower()
+            if "404" in title or "not found" in title:
+                return True
+            body = self.driver.find_elements(By.TAG_NAME, "body")
+            if body:
+                body_text = body[0].text.lower()
+                if "page not found" in body_text:
+                    return True
+            if len(self.driver.page_source) < 500:
+                return True
+        except Exception:
+            pass
+        return False
+
     # ─── Login ───────────────────────────────────────────────────────────────────
 
     def login(self) -> bool:
@@ -368,7 +385,7 @@ class FullTrackAutomation:
                 time.sleep(3)
 
                 body_html = self.driver.page_source.lower()
-                if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                if self._is_error_page():
                     self.log("WARNING", "  ⚠️ Falha ao abrir o mapa direto; tentando via menu")
                     if not self.open_map_via_menu():
                         resultado["mensagem"] = "URL não carregou corretamente — verifique a URL configurada ou o menu de navegação"
@@ -387,7 +404,7 @@ class FullTrackAutomation:
                         self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após o menu")
                     time.sleep(3)
                     body_html = self.driver.page_source.lower()
-                    if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                    if self._is_error_page():
                         resultado["mensagem"] = "Mapa aberto pelo menu, mas a página continua com erro"
                         self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                         self.log("ERROR", f"  HTML: {body_html[:300]}")
@@ -405,7 +422,7 @@ class FullTrackAutomation:
                     self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após menu")
                 time.sleep(3)
                 body_html = self.driver.page_source.lower()
-                if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                if self._is_error_page():
                     self.log("WARNING", "  ⚠️ O mapa foi aberto pelo menu, mas a página parece inválida")
                     if url:
                         self.log("INFO", f"  🔁 Tentando abrir URL direta do mapa como fallback: {url}")
@@ -418,7 +435,7 @@ class FullTrackAutomation:
                             self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após fallback")
                         time.sleep(3)
                         body_html = self.driver.page_source.lower()
-                        if "page not found" in body_html or "404" in body_html or len(body_html) < 500:
+                        if self._is_error_page():
                             resultado["mensagem"] = "Mapa aberto, mas a página continua com erro após fallback"
                             self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                             self.log("ERROR", f"  HTML: {body_html[:300]}")
