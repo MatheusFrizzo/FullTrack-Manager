@@ -531,6 +531,7 @@ class FullTrackAutomation:
                 self.log("WARNING", f"  Seletores testados:\n    {sels_tried}")
                 # Log do HTML para debug
                 try:
+                    self._save_debug_html('search_fail')
                     html_snippet = self.driver.page_source[:2000]
                     self.log("INFO", f"  HTML da página (primeiros 2000 chars):\n{html_snippet}")
                 except:
