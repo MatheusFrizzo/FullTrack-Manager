@@ -148,6 +148,43 @@ class FullTrackAutomation:
 
     # ─── Login ───────────────────────────────────────────────────────────────────
 
+    def _wait_ready(self, timeout=10) -> bool:
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            return True
+        except TimeoutException:
+            return False
+
+    def _visible_login_fields(self) -> bool:
+        try:
+            password_fields = self.driver.find_elements(By.CSS_SELECTOR, "input[type='password']")
+            return any(field.is_displayed() for field in password_fields)
+        except Exception:
+            return False
+
+    def _open_configured_map_after_login(self) -> bool:
+        map_url = self.config.get("fulltrack_url", "")
+        if not map_url:
+            return True
+
+        self.log("INFO", f"🗺️  Abrindo mapa configurado: {map_url}")
+        self.driver.get(map_url)
+        self._wait_ready(15)
+        time.sleep(3)
+
+        if self._visible_login_fields():
+            self.log("ERROR", "❌ Login não confirmado: o FullTrack voltou para a tela de login ao abrir o mapa")
+            try:
+                self._save_debug_html("login_not_confirmed")
+            except Exception:
+                pass
+            return False
+
+        self.log("INFO", "✅ Mapa configurado aberto após login")
+        return True
+
     def login(self) -> bool:
         """
         Realiza login no FullTrack.
@@ -155,18 +192,9 @@ class FullTrackAutomation:
         try:
             login_url = self.config.get("login_url") or self.config.get("fulltrack_url", "")
 
-            def wait_ready(timeout=10):
-                try:
-                    WebDriverWait(self.driver, timeout).until(
-                        lambda d: d.execute_script("return document.readyState") == "complete"
-                    )
-                    return True
-                except TimeoutException:
-                    return False
-
             self.log("INFO", f"🌐 Acessando: {login_url}")
             self.driver.get(login_url)
-            wait_ready(10)
+            self._wait_ready(10)
             time.sleep(2)
 
             # Verifica se há formulário de login na página
@@ -212,13 +240,22 @@ class FullTrackAutomation:
                 except NoSuchElementException:
                     password_field.send_keys(Keys.RETURN)
 
-                wait_ready(15)
-                time.sleep(2)
-                self.log("INFO", "✅ Login realizado")
+                self._wait_ready(15)
+                time.sleep(4)
+
+                if self._visible_login_fields():
+                    self.log("ERROR", "❌ Login recusado ou não confirmado: a tela de login continua ativa")
+                    try:
+                        self._save_debug_html("login_fail")
+                    except Exception:
+                        pass
+                    return False
+
+                self.log("INFO", "✅ Login confirmado")
             else:
                 self.log("INFO", "✅ Sem tela de login detectada (acesso direto ou sessão ativa)")
 
-            return True
+            return self._open_configured_map_after_login()
 
         except Exception as e:
             self.log("ERROR", f"❌ Erro no login: {e}")
