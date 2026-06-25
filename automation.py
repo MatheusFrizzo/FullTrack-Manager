@@ -164,6 +164,82 @@ class FullTrackAutomation:
         except Exception:
             return False
 
+    def _log_dom_state(self, prefix: str = "DOM"):
+        try:
+            self.driver.switch_to.default_content()
+            state = self.driver.execute_script(
+                """
+                return {
+                    readyState: document.readyState,
+                    url: location.href,
+                    title: document.title,
+                    inputs: document.querySelectorAll('input').length,
+                    textInputs: document.querySelectorAll("input[type='text'], input[type='search']").length,
+                    iframes: document.querySelectorAll('iframe, frame').length,
+                    bodyLength: document.body ? document.body.innerText.length : 0,
+                    bodyText: document.body ? document.body.innerText.slice(0, 300) : ''
+                };
+                """
+            )
+            self.log(
+                "INFO",
+                f"  {prefix}: ready={state.get('readyState')} inputs={state.get('inputs')} "
+                f"textInputs={state.get('textInputs')} iframes={state.get('iframes')} "
+                f"bodyLength={state.get('bodyLength')} title='{state.get('title')}'",
+            )
+            if state.get("bodyText"):
+                self.log("INFO", f"  {prefix} texto inicial: {state.get('bodyText')}")
+        except Exception as e:
+            self.log("WARNING", f"  ⚠️ Falha ao inspecionar DOM: {e}")
+
+    def _find_search_field(self, selectors: list, timeout: int):
+        def find_in_current_context(context_label: str):
+            for sel in selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, sel)
+                    for element in elements:
+                        try:
+                            if element.is_displayed() and element.is_enabled():
+                                self.log("INFO", f"    ✓ Campo encontrado em {context_label}: {sel}")
+                                return element
+                        except StaleElementReferenceException:
+                            continue
+                except Exception:
+                    continue
+            return None
+
+        deadline = time.time() + timeout
+        last_log = 0
+        while time.time() < deadline:
+            try:
+                self.driver.switch_to.default_content()
+                field = find_in_current_context("documento principal")
+                if field:
+                    return field
+
+                frames = self.driver.find_elements(By.CSS_SELECTOR, "iframe, frame")
+                for idx, frame in enumerate(frames):
+                    try:
+                        self.driver.switch_to.default_content()
+                        self.driver.switch_to.frame(frame)
+                        field = find_in_current_context(f"iframe #{idx + 1}")
+                        if field:
+                            return field
+                    except Exception:
+                        continue
+
+                self.driver.switch_to.default_content()
+                if time.time() - last_log >= 5:
+                    self._log_dom_state("Aguardando campo de busca")
+                    last_log = time.time()
+            except Exception as e:
+                self.log("WARNING", f"  ⚠️ Falha procurando campo de busca: {e}")
+
+            time.sleep(1)
+
+        self.driver.switch_to.default_content()
+        return None
+
     def _open_configured_map_after_login(self) -> bool:
         map_url = self.config.get("fulltrack_url", "")
         if not map_url:
@@ -519,48 +595,18 @@ class FullTrackAutomation:
                 ".input-busca",
             ])
 
-            search_field = None
-            for sel in search_selectors:
-                try:
-                    self.log("INFO", f"    ↳ Tentando: {sel}")
-                    # Primeiro tenta ser clickable (espera 3s)
-                    try:
-                        search_field = WebDriverWait(self.driver, 3).until(
-                            EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
-                        )
-                        self.log("INFO", f"    ✓ Seletor encontrado (clickable): {sel}")
-                        break
-                    except TimeoutException:
-                        # Se não for clickable, apenas verifica presença (espera 5s total)
-                        search_field = WebDriverWait(self.driver, 5).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, sel))
-                        )
-                        self.log("INFO", f"    ✓ Seletor encontrado (presente): {sel}")
-                        break
-                except TimeoutException:
-                    self.log("INFO", f"    ✗ Seletor não encontrado: {sel}")
-                    continue
-
-            if not search_field:
-                # Fallback: procurar o primeiro input[type='text'] visível (muitos FT usam input sem id)
-                try:
-                    candidates = self.driver.find_elements(By.CSS_SELECTOR, "input[type='text'], input[type='search']")
-                    for c in candidates:
-                        try:
-                            if c.is_displayed() and c.is_enabled():
-                                search_field = c
-                                self.log("INFO", f"    ✓ Usando fallback input[type='text'] encontrado")
-                                break
-                        except Exception:
-                            continue
-                except Exception:
-                    pass
+            self.log("INFO", "    ↳ Procurando no documento principal e em iframes...")
+            search_field = self._find_search_field(
+                search_selectors,
+                timeout=max(int(self.config.get("timeout", 20)), 30),
+            )
 
             if not search_field:
                 sels_tried = "\n    ".join(search_selectors)
                 resultado["mensagem"] = "Campo de busca não encontrado — ajuste o seletor CSS"
                 self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 self.log("WARNING", f"  Seletores testados:\n    {sels_tried}")
+                self._log_dom_state("Falha campo de busca")
                 # Log do HTML para debug
                 try:
                     self._save_debug_html('search_fail')
