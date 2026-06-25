@@ -51,6 +51,11 @@ cd ~/fulltrack-manager
 ## 3. Criar ambiente virtual e instalar dependências Python
 
 ```bash
+# Opcional: setup guiado do projeto
+chmod +x setup_linux.sh
+./setup_linux.sh
+
+# Ou manualmente:
 # Criar venv
 python3 -m venv venv
 
@@ -81,6 +86,20 @@ Você verá:
 
 Abra o navegador e acesse: **http://localhost:5000**  
 (ou **http://IP-DA-VM:5000** de outra máquina na rede)
+
+Se quiser usar outra porta:
+
+```bash
+PORT=8080 python3 app.py
+```
+
+Se o Chrome/Chromium ou ChromeDriver estiverem fora do PATH:
+
+```bash
+export FULLTRACK_CHROME_BINARY=/usr/bin/chromium
+export FULLTRACK_CHROMEDRIVER=/usr/bin/chromedriver
+python3 app.py
+```
 
 ---
 
@@ -205,6 +224,10 @@ fulltrack-manager/
 
 ### Chrome não inicia
 ```bash
+# Verifique caminhos detectados
+which chromium || which chromium-browser || which google-chrome || which google-chrome-stable
+which chromedriver
+
 # Teste manual
 chromium-browser --headless --no-sandbox --dump-dom https://google.com
 

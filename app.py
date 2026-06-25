@@ -375,11 +375,12 @@ def get_stats():
 # ─── Main ────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "5000"))
     db.init()
     db.reset_serials_status("processando", "pendente")
     add_log("INFO", "🎯 FullTrack Manager iniciado")
     print("=" * 60)
-    print("  FullTrack Manager rodando em http://0.0.0.0:5000")
-    print("  Acesse pelo navegador: http://localhost:5000")
+    print(f"  FullTrack Manager rodando em http://0.0.0.0:{port}")
+    print(f"  Acesse pelo navegador: http://localhost:{port}")
     print("=" * 60)
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

@@ -8,12 +8,15 @@ FullTrack Automation - Selenium Web Scraping
 """
 
 import time
+import os
+import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import (
     TimeoutException, NoSuchElementException,
     StaleElementReferenceException, WebDriverException
@@ -53,7 +56,33 @@ class FullTrackAutomation:
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
 
-            self.driver = webdriver.Chrome(options=options)
+            chrome_binary = (
+                os.environ.get("FULLTRACK_CHROME_BINARY")
+                or shutil.which("chromium-browser")
+                or shutil.which("chromium")
+                or shutil.which("google-chrome")
+                or shutil.which("google-chrome-stable")
+            )
+            if chrome_binary:
+                options.binary_location = chrome_binary
+                self.log("INFO", f"  → Chrome/Chromium: {chrome_binary}")
+            else:
+                self.log("WARNING", "  ⚠️ Chrome/Chromium não encontrado no PATH; tentando Selenium Manager")
+
+            chromedriver_path = (
+                os.environ.get("FULLTRACK_CHROMEDRIVER")
+                or shutil.which("chromedriver")
+            )
+            if chromedriver_path:
+                self.log("INFO", f"  → ChromeDriver: {chromedriver_path}")
+                self.driver = webdriver.Chrome(
+                    service=Service(chromedriver_path),
+                    options=options,
+                )
+            else:
+                self.log("WARNING", "  ⚠️ chromedriver não encontrado no PATH; tentando Selenium Manager")
+                self.driver = webdriver.Chrome(options=options)
+
             self.driver.implicitly_wait(5)
             self.wait = WebDriverWait(self.driver, self.config.get("timeout", 20))
 
@@ -62,7 +91,9 @@ class FullTrackAutomation:
 
         except Exception as e:
             self.log("ERROR", f"❌ Falha ao iniciar Chrome: {e}")
-            self.log("ERROR", "   → Verifique se o ChromeDriver está instalado: sudo apt install chromium-driver")
+            self.log("ERROR", "   → Verifique no Linux: which chromium || which chromium-browser || which google-chrome")
+            self.log("ERROR", "   → Verifique o driver: which chromedriver")
+            self.log("ERROR", "   → Também é possível definir FULLTRACK_CHROME_BINARY e FULLTRACK_CHROMEDRIVER")
             return False
 
     def stop(self):
