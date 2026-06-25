@@ -443,90 +443,41 @@ class FullTrackAutomation:
 
             # === PASSO 1: Voltar ao mapa ===
             url = self.config.get("fulltrack_url", "")
-            self.log("INFO", "  🌐 Tentando abrir o mapa via menu primeiro...")
-            opened = self.open_map_via_menu()
-            if not opened:
-                if not url:
-                    resultado["mensagem"] = "Nenhuma URL de mapa configurada e o menu não foi encontrado"
-                    self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                    return resultado
+            if not url:
+                resultado["mensagem"] = "Nenhuma URL de mapa configurada"
+                self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                return resultado
 
-                self.log("INFO", f"  🔗 Abrindo mapa diretamente: {url}")
-                self.driver.get(url)
-                try:
-                    WebDriverWait(self.driver, 10).until(
-                        lambda driver: driver.execute_script("return document.readyState") == "complete"
-                    )
-                    self.log("INFO", f"  ✓ Página carregada (readyState=complete)")
-                except TimeoutException:
-                    self.log("WARNING", "  ⚠️ Timeout esperando página carregar")
-                time.sleep(3)
+            self.log("INFO", f"  🔗 Abrindo mapa diretamente: {url}")
+            self.driver.get(url)
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    lambda driver: driver.execute_script("return document.readyState") == "complete"
+                )
+                self.log("INFO", f"  ✓ Página carregada (readyState=complete)")
+            except TimeoutException:
+                self.log("WARNING", "  ⚠️ Timeout esperando página carregar")
+            time.sleep(3)
 
-                body_html = self.driver.page_source.lower()
-                if self._is_error_page():
-                    self.log("WARNING", "  ⚠️ Falha ao abrir o mapa direto; tentando via menu")
-                    if not self.open_map_via_menu():
-                        resultado["mensagem"] = "URL não carregou corretamente — verifique a URL configurada ou o menu de navegação"
-                        self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                        self.log("ERROR", f"  HTML: {body_html[:300]}")
-                        try:
-                            self._save_debug_html('direct_fail')
-                        except Exception:
-                            pass
-                        return resultado
-                    try:
-                        WebDriverWait(self.driver, 10).until(
-                            lambda driver: driver.execute_script("return document.readyState") == "complete"
-                        )
-                    except TimeoutException:
-                        self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após o menu")
-                    time.sleep(3)
-                    body_html = self.driver.page_source.lower()
-                    if self._is_error_page():
-                        resultado["mensagem"] = "Mapa aberto pelo menu, mas a página continua com erro"
-                        self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                        self.log("ERROR", f"  HTML: {body_html[:300]}")
-                        try:
-                            self._save_debug_html('menu_fail')
-                        except Exception:
-                            pass
-                        return resultado
-            else:
+            body_html = self.driver.page_source.lower()
+            if self._visible_login_fields():
+                resultado["mensagem"] = "Sessão não autenticada ao abrir o mapa"
+                self.log("ERROR", f"  ❌ {resultado['mensagem']}")
                 try:
-                    WebDriverWait(self.driver, 10).until(
-                        lambda driver: driver.execute_script("return document.readyState") == "complete"
-                    )
-                except TimeoutException:
-                    self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após menu")
-                time.sleep(3)
-                body_html = self.driver.page_source.lower()
-                if self._is_error_page():
-                    self.log("WARNING", "  ⚠️ O mapa foi aberto pelo menu, mas a página parece inválida")
-                    if url:
-                        self.log("INFO", f"  🔁 Tentando abrir URL direta do mapa como fallback: {url}")
-                        self.driver.get(url)
-                        try:
-                            WebDriverWait(self.driver, 10).until(
-                                lambda driver: driver.execute_script("return document.readyState") == "complete"
-                            )
-                        except TimeoutException:
-                            self.log("WARNING", "  ⚠️ Timeout aguardando a página de mapa carregar após fallback")
-                        time.sleep(3)
-                        body_html = self.driver.page_source.lower()
-                        if self._is_error_page():
-                            resultado["mensagem"] = "Mapa aberto, mas a página continua com erro após fallback"
-                            self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                            self.log("ERROR", f"  HTML: {body_html[:300]}")
-                            try:
-                                self._save_debug_html('fallback_fail')
-                            except Exception:
-                                pass
-                            return resultado
-                    else:
-                        resultado["mensagem"] = "Mapa aberto, mas a página parece inválida e nenhuma URL direta está configurada"
-                        self.log("ERROR", f"  ❌ {resultado['mensagem']}")
-                        self.log("ERROR", f"  HTML: {body_html[:300]}")
-                        return resultado
+                    self._save_debug_html('map_login_required')
+                except Exception:
+                    pass
+                return resultado
+
+            if self._is_error_page():
+                resultado["mensagem"] = "URL do mapa não carregou corretamente"
+                self.log("ERROR", f"  ❌ {resultado['mensagem']}")
+                self.log("ERROR", f"  HTML: {body_html[:300]}")
+                try:
+                    self._save_debug_html('direct_map_fail')
+                except Exception:
+                    pass
+                return resultado
 
             # === PASSO 2: Campo de busca ===
             self.log("INFO", f"  🔍 Localizando campo de busca...")
