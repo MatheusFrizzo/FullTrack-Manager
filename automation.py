@@ -165,9 +165,8 @@ class FullTrackAutomation:
             return False
 
     def _log_dom_state(self, prefix: str = "DOM"):
-        try:
-            self.driver.switch_to.default_content()
-            state = self.driver.execute_script(
+        def read_state():
+            return self.driver.execute_script(
                 """
                 return {
                     readyState: document.readyState,
@@ -181,16 +180,37 @@ class FullTrackAutomation:
                 };
                 """
             )
+
+        def log_state(label: str, state: dict):
             self.log(
                 "INFO",
-                f"  {prefix}: ready={state.get('readyState')} inputs={state.get('inputs')} "
+                f"  {label}: ready={state.get('readyState')} inputs={state.get('inputs')} "
                 f"textInputs={state.get('textInputs')} iframes={state.get('iframes')} "
                 f"bodyLength={state.get('bodyLength')} title='{state.get('title')}'",
             )
             if state.get("bodyText"):
-                self.log("INFO", f"  {prefix} texto inicial: {state.get('bodyText')}")
+                self.log("INFO", f"  {label} texto inicial: {state.get('bodyText')}")
+
+        try:
+            self.driver.switch_to.default_content()
+            log_state(prefix, read_state())
+
+            frames = self.driver.find_elements(By.CSS_SELECTOR, "iframe, frame")
+            for idx, frame in enumerate(frames):
+                src = frame.get_attribute("src") or "(sem src)"
+                try:
+                    self.driver.switch_to.default_content()
+                    self.driver.switch_to.frame(frame)
+                    log_state(f"{prefix} iframe #{idx + 1} src={src}", read_state())
+                except Exception as e:
+                    self.log("WARNING", f"  ⚠️ Não foi possível inspecionar iframe #{idx + 1} src={src}: {e}")
         except Exception as e:
             self.log("WARNING", f"  ⚠️ Falha ao inspecionar DOM: {e}")
+        finally:
+            try:
+                self.driver.switch_to.default_content()
+            except Exception:
+                pass
 
     def _find_search_field(self, selectors: list, timeout: int):
         def find_in_current_context(context_label: str):
@@ -208,25 +228,38 @@ class FullTrackAutomation:
                     continue
             return None
 
+        def find_recursive(context_label: str, depth: int = 0):
+            field = find_in_current_context(context_label)
+            if field:
+                return field
+
+            if depth >= 3:
+                return None
+
+            frames = self.driver.find_elements(By.CSS_SELECTOR, "iframe, frame")
+            for idx, frame in enumerate(frames):
+                try:
+                    self.driver.switch_to.frame(frame)
+                    field = find_recursive(f"{context_label} > iframe #{idx + 1}", depth + 1)
+                    if field:
+                        return field
+                except Exception:
+                    pass
+                try:
+                    self.driver.switch_to.parent_frame()
+                except Exception:
+                    self.driver.switch_to.default_content()
+
+            return None
+
         deadline = time.time() + timeout
         last_log = 0
         while time.time() < deadline:
             try:
                 self.driver.switch_to.default_content()
-                field = find_in_current_context("documento principal")
+                field = find_recursive("documento principal")
                 if field:
                     return field
-
-                frames = self.driver.find_elements(By.CSS_SELECTOR, "iframe, frame")
-                for idx, frame in enumerate(frames):
-                    try:
-                        self.driver.switch_to.default_content()
-                        self.driver.switch_to.frame(frame)
-                        field = find_in_current_context(f"iframe #{idx + 1}")
-                        if field:
-                            return field
-                    except Exception:
-                        continue
 
                 self.driver.switch_to.default_content()
                 if time.time() - last_log >= 5:
