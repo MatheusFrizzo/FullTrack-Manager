@@ -546,6 +546,9 @@ class FullTrackAutomation:
                 self.log("INFO", f"    (configurado: {configured_selector})")
 
             search_selectors.extend([
+                ".sc-kNxgZW .sc-bRimrq input[type='text']",
+                ".sc-kNxgZW input[type='text']",
+                ".sc-bRimrq input[type='text']",
                 "input[type='search']",
                 "input[type='text'][placeholder*='buscar' i]",
                 "input[type='text'][placeholder*='serial' i]",
@@ -617,8 +620,31 @@ class FullTrackAutomation:
                 return resultado
 
             # === PASSO 3: Digitar e buscar ===
-            search_field.clear()
-            search_field.send_keys(numero)
+            try:
+                search_field.click()
+            except Exception:
+                self.driver.execute_script("arguments[0].focus();", search_field)
+
+            try:
+                search_field.clear()
+                search_field.send_keys(numero)
+            except Exception:
+                self.driver.execute_script(
+                    """
+                    const input = arguments[0];
+                    const value = arguments[1];
+                    const setter = Object.getOwnPropertyDescriptor(
+                        window.HTMLInputElement.prototype,
+                        'value'
+                    ).set;
+                    setter.call(input, value);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    """,
+                    search_field,
+                    numero,
+                )
+
             time.sleep(0.5)
             search_field.send_keys(Keys.RETURN)
             time.sleep(self.config.get("delay_between", 2))
